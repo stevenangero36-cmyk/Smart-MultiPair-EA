@@ -7,7 +7,8 @@ input string PairsList = "EURUSD,GBPUSD,USDJPY,AUDUSD,USDCAD,EURJPY";
 input ENUM_TIMEFRAMES TimeFrame = PERIOD_H1;
 input int FastMA = 20;
 input int SlowMA = 50;
-
+input double LotSize = 0.01; // Ukubwa wa Lot kwa kila trade
+input int MagicNumber = 12345; // Namba ya kutambua trade zako
 string Symbols[];
 int FastHandles[];
 int SlowHandles[];
@@ -92,4 +93,26 @@ void OnDeinit(const int reason)
       if(SlowHandles[i] != INVALID_HANDLE)
          IndicatorRelease(SlowHandles[i]);
    }
+}
+void ExecuteTrade(string symbol, ENUM_ORDER_TYPE type)
+{
+   MqlTradeRequest request = {0};
+   MqlTradeResult result = {0};
+
+   request.action = TRADE_ACTION_DEAL;
+   request.symbol = symbol;
+   request.volume = LotSize;
+   request.type = type;
+   request.magic = MagicNumber;
+   request.deviation = 10;
+
+   if(type == ORDER_TYPE_BUY)
+      request.price = SymbolInfoDouble(symbol, SYMBOL_ASK);
+   else if(type == ORDER_TYPE_SELL)
+      request.price = SymbolInfoDouble(symbol, SYMBOL_BID);
+
+   if(!OrderSend(request, result))
+      Print("Kosa la Trade kwenye ", symbol, ": ", result.retcode);
+   else
+      Print("Trade imefanikiwa kwenye ", symbol);
 }
