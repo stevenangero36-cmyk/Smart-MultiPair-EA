@@ -122,8 +122,11 @@ bool IsTradeOpen(string symbol)
 
 void ExecuteTrade(string symbol, ENUM_ORDER_TYPE type)
 {
-   MqlTradeRequest request = {0};
-   MqlTradeResult result = {0};
+   MqlTradeRequest request;
+   MqlTradeResult result;
+   
+   ZeroMemory(request);
+   ZeroMemory(result);
    
    double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
    int digits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
