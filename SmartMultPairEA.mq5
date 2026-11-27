@@ -1,16 +1,95 @@
-if(fast[0] > slow[0])
+
+#property strict
+#property version "1.00"
+#property description "Smart Multi Pair EA - Trend Scanner"
+
+input string PairsList = "EURUSD,GBPUSD,USDJPY,AUDUSD,USDCAD,EURJPY";
+input ENUM_TIMEFRAMES TimeFrame = PERIOD_H1;
+input int FastMA = 20;
+input int SlowMA = 50;
+
+string Symbols[];
+int FastHandles[];
+int SlowHandles[];
+
+int OnInit()
 {
-    Print(Symbols[i], ": UP TREND");
-    if(!IsTradeOpen(Symbols[i]))
-        ExecuteTrade(Symbols[i], ORDER_TYPE_BUY);
+   int count = StringSplit(PairsList, ',', Symbols);
+
+   if(count <= 0)
+      return INIT_FAILED;
+
+   ArrayResize(FastHandles, count);
+   ArrayResize(SlowHandles, count);
+
+   for(int i = 0; i < count; i++)
+   {
+      StringTrimLeft(Symbols[i]);
+      StringTrimRight(Symbols[i]);
+
+      SymbolSelect(Symbols[i], true);
+
+      FastHandles[i] = iMA(Symbols[i], TimeFrame,
+                           FastMA, 0, MODE_EMA, PRICE_CLOSE);
+
+      SlowHandles[i] = iMA(Symbols[i], TimeFrame,
+                           SlowMA, 0, MODE_EMA, PRICE_CLOSE);
+
+      if(FastHandles[i] == INVALID_HANDLE ||
+         SlowHandles[i] == INVALID_HANDLE)
+      {
+         Print("Indicator error: ", Symbols[i]);
+         return INIT_FAILED;
+      }
+   }
+
+   EventSetTimer(60);
+   Print("Smart Multi Pair EA started.");
+
+   return INIT_SUCCEEDED;
 }
-else if(fast[0] < slow[0])
+
+void OnTimer()
 {
-    Print(Symbols[i], ": DOWN TREND");
-    if(!IsTradeOpen(Symbols[i]))
-        ExecuteTrade(Symbols[i], ORDER_TYPE_SELL);
+   for(int i = 0; i < ArraySize(Symbols); i++)
+   {
+      double fast[];
+      double slow[];
+
+      ArraySetAsSeries(fast, true);
+      ArraySetAsSeries(slow, true);
+
+      if(CopyBuffer(FastHandles[i], 0, 1, 1, fast) < 1)
+         continue;
+
+      if(CopyBuffer(SlowHandles[i], 0, 1, 1, slow) < 1)
+         continue;
+
+      if(fast[0] > slow[0])
+         Print(Symbols[i], " : UP TREND");
+
+      else if(fast[0] < slow[0])
+         Print(Symbols[i], " : DOWN TREND");
+
+      else
+         Print(Symbols[i], " : NEUTRAL");
+   }
 }
-else
+
+void OnTick()
 {
-    Print(Symbols[i], ": NEUTRAL");
+}
+
+void OnDeinit(const int reason)
+{
+   EventKillTimer();
+
+   for(int i = 0; i < ArraySize(Symbols); i++)
+   {
+      if(FastHandles[i] != INVALID_HANDLE)
+         IndicatorRelease(FastHandles[i]);
+
+      if(SlowHandles[i] != INVALID_HANDLE)
+         IndicatorRelease(SlowHandles[i]);
+   }
 }
